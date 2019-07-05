@@ -6,7 +6,15 @@ import (
 	"log"
 	"net/http"
 	"github.com/gorilla/mux"
+	"os"
+	"bufio"
 )
+
+func check(e error){
+	if e != nil{
+		panic(e)
+	}
+}
 
 //Source of help
 //https://medium.com/@rafaelacioly/construindo-uma-api-restful-com-go-d6007e4faff6
@@ -28,8 +36,33 @@ func GetCityWeather(w http.ResponseWriter, r *http.Request) {
 	//TODO - Return JSON
 }
 
+func GetCityList() {
+	//Define Filepath
+	//TODO - Improve reusability
+	f, err := os.Open("/home/user/Desktop/cityIDs.txt")
+	check(err)
+
+	defer func() {
+        	if err = f.Close(); err != nil {
+			log.Fatal(err)
+		}
+	}()
+
+	//Read Lines
+	s := bufio.NewScanner(f)
+
+	//Print Each Line
+	for s.Scan() {
+      	  fmt.Println(s.Text())
+    	}
+	check(s.Err())
+}
+
 func GetWeather(w http.ResponseWriter, r *http.Request) {
-	//TODO - get city IDs from file
+	//get city IDs from file
+	GetCityList()
+
+	//TODO - Call CityAPICall
 	//TODO - Build JSON
 	
 }
