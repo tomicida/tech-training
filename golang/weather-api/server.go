@@ -28,15 +28,15 @@ func CityAPICall(cityID string){
 }
 
 func GetCityWeather(w http.ResponseWriter, r *http.Request) {
-	params := mux.Vars(r)
-	cityID := params["cityID"]
+	//params := mux.Vars(r)
+	//cityID := params["cityID"]
 
 	//TODO - Call CityAPICall
 	//TODO - Build JSON
 	//TODO - Return JSON
 }
 
-func GetCityList() {
+func GetCityList() (array []string) {
 	//Define Filepath
 	//TODO - Improve reusability
 	f, err := os.Open("/home/user/Desktop/cityIDs.txt")
@@ -51,19 +51,25 @@ func GetCityList() {
 	//Read Lines
 	s := bufio.NewScanner(f)
 
-	//Print Each Line
+	//Store Each Line
 	for s.Scan() {
-      	  fmt.Println(s.Text())
+		array = append(array, s.Text())	  
+		//fmt.Println(s.Text())
     	}
 	check(s.Err())
+	return
 }
 
 func GetWeather(w http.ResponseWriter, r *http.Request) {
 	//get city IDs from file
-	GetCityList()
+	array := GetCityList()
+	for i:= range array {
+		fmt.Println(array[i])	
+	}
 
 	//TODO - Call CityAPICall
 	//TODO - Build JSON
+	json.NewEncoder(w).Encode(array)
 	
 }
 
