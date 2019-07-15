@@ -8,7 +8,23 @@ import (
 	"github.com/gorilla/mux"
 	"os"
 	"bufio"
+	"math"
 )
+
+type Sample struct {
+	Time	string	`json:"time"`
+	Temp	float64	`json:"temp"`
+	Weather	string	`json:"weather"`	
+}	
+
+type Day struct { 
+	TempMin	float64	`json:"temp_min"`
+	TempMax float64	`json:"temp_max"`
+	TempAvg float64	`json:"temp_avg"`
+	Date	string	`json:"date"`
+	Rain	bool	`json:"rain"`
+	Sample	[]Sample	`json:"sample"`
+}	
 
 type Prediction struct {
 	Cod     string  `json:"cod"`
@@ -150,13 +166,69 @@ func GetAPIKey(index int) (key string){
 	return
 }
 
+func SendableConverter(p Prediction) (s []Day){
+	numberOfDays := 5
+	sampleInterval := 3
+	samplesPerDay := 24/sampleInterval
+
+	for i := 0; i < numberOfDays ; i++ {
+		dayIndex := i*samplesPerDay
+		
+		willRain := false		
+		minTemp := KelvinToCelsius(p.List[dayIndex].Main.Temp)
+		maxTemp := KelvinToCelsius(p.List[dayIndex].Main.Temp)
+		avgTemp := float64(0)
+
+		s = append(s,Day{})
+		s[i].Date = p.List[dayIndex].DtTxt[:10]
+		
+		//TODO - Fix index/days counters
+		for j := 0; j < samplesPerDay; j++{
+			currentSample := p.List[dayIndex + j]
+			var sample Sample
+	
+			sample.Time = currentSample.DtTxt[11:]
+			sample.Temp = KelvinToCelsius(currentSample.Main.Temp)
+			sample.Weather = currentSample.Weather[0].Main
+			
+			if minTemp > sample.Temp {
+				minTemp = sample.Temp
+			}
+			if maxTemp < sample.Temp {
+				maxTemp = sample.Temp		
+			}
+			avgTemp += sample.Temp
+			if sample.Weather == "Rain"{
+				willRain = true			
+			}
+
+			s[i].Sample = append(s[i].Sample, sample)
+		}
+		
+		s[i].TempAvg = reduce(avgTemp/float64(samplesPerDay))
+		s[i].TempMin = minTemp
+		s[i].TempMax = maxTemp
+		s[i].Rain = willRain
+	}
+	
+
+	return
+}
+
+func KelvinToCelsius (k float64) (c float64) {
+	c = reduce(k - 272.15)
+	return
+}
+
+func reduce (o float64) (n float64) {
+	n = math.Floor((o*100))/100
+	return 
+}
+
 func GetWeather(w http.ResponseWriter, r *http.Request) {
 		
 	//get city IDs from file
 	array := GetCityList()
-	for i:= range array {
-		fmt.Println(array[i])	
-	}
 
 	//Get API Key
 	key := GetAPIKey(0)
@@ -164,11 +236,14 @@ func GetWeather(w http.ResponseWriter, r *http.Request) {
 	//Call CityAPICall
 	var resultsArray []Prediction
 	for index := range array{
-		resultsArray = append(resultsArray,CityAPICall(array[index],key))	
+		appendable := CityAPICall(array[index],key)
+		resultsArray = append(resultsArray,appendable)	
 	}
+	
+	
 
 	//TODO - Build JSON
-	json.NewEncoder(w).Encode(resultsArray)
+	json.NewEncoder(w).Encode(SendableConverter(resultsArray[0]))
 	
 }
 
